@@ -1,0 +1,4 @@
+2026-04-21 12:00:00 INFO Server started on port 8080
+2026-04-21 12:00:01 INFO Request received from 10.0.0.1
+2026-04-21 12:00:02 INFO Processing batch job 12345
+2026-04-21 12:00:03 INFO Job completed successfully
