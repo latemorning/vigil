@@ -2,8 +2,17 @@
 from __future__ import annotations
 import re
 from typing import Iterator
-from vigil.detectors.base import Match, Confidence, Detector
+from vigil.detectors.base import Match
 from vigil.validators import validate_rrn, validate_brn
+
+__all__ = [
+    "RRNDetector",
+    "PhoneMobileDetector",
+    "PhoneLandlineDetector",
+    "BusinessNumberDetector",
+    "CIDetector",
+    "KoreanNameDetector",
+]
 
 
 _KOREAN_SURNAMES = frozenset([
@@ -40,7 +49,7 @@ class RRNDetector:
             if not validate_rrn(digits):
                 continue
             yield Match(
-                detector="rrn",
+                detector=self.name,
                 value=raw,
                 line_no=line_no,
                 column=m.start(),
@@ -57,7 +66,7 @@ class PhoneMobileDetector:
     def find(self, line: str, line_no: int = 0) -> Iterator[Match]:
         for m in self._PATTERN.finditer(line):
             yield Match(
-                detector="phone_mobile",
+                detector=self.name,
                 value=m.group(0),
                 line_no=line_no,
                 column=m.start(),
@@ -74,7 +83,7 @@ class PhoneLandlineDetector:
     def find(self, line: str, line_no: int = 0) -> Iterator[Match]:
         for m in self._PATTERN.finditer(line):
             yield Match(
-                detector="phone_landline",
+                detector=self.name,
                 value=m.group(0),
                 line_no=line_no,
                 column=m.start(),
@@ -94,7 +103,7 @@ class BusinessNumberDetector:
             if not validate_brn(digits):
                 continue
             yield Match(
-                detector="business_number",
+                detector=self.name,
                 value=m.group(0),
                 line_no=line_no,
                 column=m.start(),
@@ -123,7 +132,7 @@ class CIDetector:
             cap_end = m.end(1)
             labeled_spans.add((cap_start, cap_end))
             yield Match(
-                detector="ci",
+                detector=self.name,
                 value=cap,
                 line_no=line_no,
                 column=cap_start,
@@ -135,7 +144,7 @@ class CIDetector:
             if span in labeled_spans:
                 continue
             yield Match(
-                detector="ci",
+                detector=self.name,
                 value=m.group(1),
                 line_no=line_no,
                 column=m.start(1),
@@ -163,7 +172,7 @@ class KoreanNameDetector:
             cap_end = m.end(1)
             context_spans.add((cap_start, cap_end))
             yield Match(
-                detector="name_korean",
+                detector=self.name,
                 value=cap,
                 line_no=line_no,
                 column=cap_start,
@@ -181,7 +190,7 @@ class KoreanNameDetector:
             if candidate in _KOREAN_NAME_STOP:
                 continue
             yield Match(
-                detector="name_korean",
+                detector=self.name,
                 value=candidate,
                 line_no=line_no,
                 column=m.start(1),

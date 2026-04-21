@@ -31,6 +31,6 @@ class FileMatch:
 class Detector(Protocol):
     """Protocol for PII detectors."""
     name: str  # detector identifier, e.g. "rrn", "email" — used for filtering and reporting
-    def find(self, line: str) -> Iterator[Match]:
-        """Find all matches in a single line."""
+    def find(self, line: str, line_no: int = 0) -> Iterator[Match]:
+        """Find all matches in a single line. line_no is 1-indexed."""
         ...
