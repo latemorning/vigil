@@ -60,20 +60,20 @@ def test_scan_path_extension_filter():
 
 
 # 6. min_confidence="high" filters out low-confidence name_korean matches
+# mixed.log line 5 "담당자 박수진 연락처" produces a low-confidence name match (surname heuristic)
+# mixed.log line 3 "이름=홍길동" produces a high-confidence context match
 def test_scan_file_min_confidence_high():
     detectors = [KoreanNameDetector()]
-    # With min_confidence="low" we get the high-confidence context match
     matches_low = scan_file(FIXTURES / "mixed.log", detectors, min_confidence="low")
     matches_high = scan_file(FIXTURES / "mixed.log", detectors, min_confidence="high")
-    # "이름=홍길동" triggers context-keyword (high confidence) match
-    assert any(m.detector == "name_korean" and m.confidence == "high" for m in matches_high)
-    # low-confidence matches should be filtered out in high mode
-    low_conf = [m for m in matches_low if m.confidence == "low"]
-    high_conf = [m for m in matches_high if m.confidence == "low"]
-    assert len(high_conf) == 0
-    # If there were any low-conf matches, they're gone in high mode
-    if low_conf:
-        assert len(matches_high) < len(matches_low)
+    # High mode must keep high-confidence matches
+    assert any(m.confidence == "high" for m in matches_high)
+    # High mode must have no low-confidence matches
+    assert all(m.confidence == "high" for m in matches_high)
+    # Low mode must produce more matches (박수진 is low-confidence via surname heuristic)
+    low_conf_in_low_mode = [m for m in matches_low if m.confidence == "low"]
+    assert len(low_conf_in_low_mode) >= 1, "mixed.log should produce at least one low-confidence name match"
+    assert len(matches_high) < len(matches_low)
 
 
 # 7. ScanResult.by_detector returns correct counts

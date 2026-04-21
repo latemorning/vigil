@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Sequence
 from vigil.detectors.base import FileMatch, Detector
 
-__all__ = ["ScanResult", "scan_file", "scan_path"]
+__all__ = ["ScanResult", "scan_file", "scan_path", "DEFAULT_EXTENSIONS"]
 
 DEFAULT_EXTENSIONS = frozenset({".log", ".txt", ""})
 
