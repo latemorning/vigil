@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Protocol, Iterator
 
+__all__ = ["Match", "FileMatch", "Detector", "Confidence"]
+
 Confidence = Literal["high", "low"]
 
 
@@ -28,7 +30,7 @@ class FileMatch:
 
 class Detector(Protocol):
     """Protocol for PII detectors."""
-    name: str
+    name: str  # detector identifier, e.g. "rrn", "email" — used for filtering and reporting
     def find(self, line: str) -> Iterator[Match]:
         """Find all matches in a single line."""
         ...
