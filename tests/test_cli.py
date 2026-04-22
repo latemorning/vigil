@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 import pytest
-from vigil.cli import build_parser
+from vigil.cli import build_parser, _load_stopwords_file
 
 
 def run_vigil(*args, cwd="/Users/harry/projects/vigil"):
@@ -93,3 +93,37 @@ def test_main_scan_detector_filter():
     data = json.loads(Path(output).read_text())
     for match in data["matches"]:
         assert match["detector"] == "email"
+
+
+def test_main_scan_name_stopwords_filters():
+    output = "/tmp/vigil-test-stopwords.json"
+    result = run_vigil(
+        "scan", "tests/fixtures/logs/name_stopwords_test.log",
+        "--name-stopwords", "tests/fixtures/name_stopwords/company_terms.txt",
+        "--quiet",
+        "--output", output,
+    )
+    data = json.loads(Path(output).read_text())
+    matched_values = [m["value"] for m in data["matches"]]
+    assert "박하시럽" not in matched_values
+    assert "이모티콘" not in matched_values
+    assert "박수진" in matched_values
+
+
+def test_main_scan_name_stopwords_missing_file_exits_2():
+    result = run_vigil(
+        "scan", "tests/fixtures/logs/mixed.log",
+        "--name-stopwords", "/tmp/nonexistent-stopwords.txt",
+        "--quiet",
+        "--output", "/tmp/vigil-test-sw-missing.json",
+    )
+    assert result.returncode == 2
+    assert "does not exist" in result.stderr
+
+
+def test_load_stopwords_file_ignores_comments_and_blank_lines(tmp_path):
+    f = tmp_path / "words.txt"
+    f.write_text("# 주석\n박하시럽\n\n이모티콘\n# 또 주석\n강남점\n", encoding="utf-8")
+    result = _load_stopwords_file(f)
+    assert result == frozenset({"박하시럽", "이모티콘", "강남점"})
+    assert "# 주석" not in result

@@ -329,3 +329,22 @@ class TestKoreanNameDetector:
         assert len(high) == 1
         # value starts at the Korean name, not at "이름"
         assert line[high[0].column:high[0].column + len(high[0].value)] == high[0].value
+
+    def test_extra_stopword_filters_strategy_b(self):
+        det = KoreanNameDetector(extra_stopwords={"이모티"})
+        matches = list(det.find("이모티 귀엽다"))
+        values = [m.value for m in matches]
+        assert "이모티" not in values
+
+    def test_builtin_stopwords_still_active_with_extras(self):
+        det = KoreanNameDetector(extra_stopwords={"이모티"})
+        matches = list(det.find("김치 맛있다"))
+        values = [m.value for m in matches]
+        assert "김치" not in values
+
+    def test_extras_do_not_affect_strategy_a(self):
+        det = KoreanNameDetector(extra_stopwords={"박하시럽"})
+        matches = list(det.find("이름=박하시럽"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 1
+        assert high[0].value == "박하시럽"

@@ -4,10 +4,21 @@ import sys
 import argparse
 from pathlib import Path
 from vigil.detectors import BUILTIN_DETECTORS
+from vigil.detectors.korean import KoreanNameDetector
 from vigil.scanner import scan_path, DEFAULT_EXTENSIONS
 from vigil.report import print_summary, write_json_report
 
 __all__ = ["main"]
+
+
+def _load_stopwords_file(path: Path) -> frozenset[str]:
+    words: set[str] = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        words.add(line)
+    return frozenset(words)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +59,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Suppress terminal summary output",
     )
+    scan.add_argument(
+        "--name-stopwords",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        dest="name_stopwords",
+        help="Path to a UTF-8 text file of words to exclude from Korean name detection (one per line, # comments allowed)",
+    )
     return parser
 
 
@@ -66,13 +85,25 @@ def main() -> None:
         sys.exit(2)
 
     # Build detector list
-    detectors = BUILTIN_DETECTORS
+    detectors = list(BUILTIN_DETECTORS)
     if args.detector:
         wanted = {name.strip() for name in args.detector.split(",")}
         detectors = [d for d in detectors if d.name in wanted]
         if not detectors:
             print(f"Error: no detectors matched: {args.detector}", file=sys.stderr)
             sys.exit(2)
+
+    # Apply extra stopwords to Korean name detector if requested
+    if args.name_stopwords:
+        sw_path = args.name_stopwords.resolve()
+        if not sw_path.exists():
+            print(f"Error: --name-stopwords file does not exist: {sw_path}", file=sys.stderr)
+            sys.exit(2)
+        extra = _load_stopwords_file(sw_path)
+        detectors = [
+            KoreanNameDetector(extra_stopwords=extra) if d.name == "name_korean" else d
+            for d in detectors
+        ]
 
     # Build extension set
     extensions = None

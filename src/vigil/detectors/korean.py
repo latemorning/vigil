@@ -1,7 +1,7 @@
 """Korean PII detectors."""
 from __future__ import annotations
 import re
-from typing import Iterator
+from typing import Iterable, Iterator
 from vigil.detectors.base import Match
 from vigil.validators import validate_rrn, validate_brn
 
@@ -162,6 +162,9 @@ class KoreanNameDetector:
     )
     _PATTERN_SURNAME = re.compile(r'(?<![가-힣])([가-힣]{2,4})(?![가-힣])')
 
+    def __init__(self, extra_stopwords: Iterable[str] | None = None) -> None:
+        self._stopwords = _KOREAN_NAME_STOP | frozenset(extra_stopwords or ())
+
     def find(self, line: str, line_no: int = 0) -> Iterator[Match]:
         context_spans: set[tuple[int, int]] = set()
 
@@ -187,7 +190,7 @@ class KoreanNameDetector:
                 continue
             if candidate[0] not in _KOREAN_SURNAMES:
                 continue
-            if candidate in _KOREAN_NAME_STOP:
+            if candidate in self._stopwords:
                 continue
             yield Match(
                 detector=self.name,
