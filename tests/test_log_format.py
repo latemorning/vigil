@@ -89,3 +89,19 @@ def test_partial_timestamp_returns_none():
     # Looks like a timestamp but malformed — should not match
     line = "2026-04-21 INFO vigil.module - message"
     assert parse_logger_name(line) is None
+
+
+def test_format_5_wildfly_embedded():
+    # WildFly/JBoss: outer server prefix + inner app log embedded in the line
+    line = "[0m00:00:07,720 INFO  [stdout] (default task-1) 2026-04-14 00:00:07.720 [INFO ] [default task-1] c.o.p.a.soc.controller.KmcController - message"
+    assert parse_logger_name(line) == "c.o.p.a.soc.controller.KmcController"
+
+
+def test_format_5_wildfly_warn_level():
+    line = "[0m00:00:18,763 INFO  [stdout] (scheduler) 2026-04-14 00:00:18.763 [WARN ] [scheduler] c.o.p.a.p.s.ClipPointServiceImpl - timeout"
+    assert parse_logger_name(line) == "c.o.p.a.p.s.ClipPointServiceImpl"
+
+
+def test_format_5_wildfly_error_level():
+    line = "... 2026-04-14 09:00:00.000 [ERROR] [http-thread] com.example.MyService - something failed"
+    assert parse_logger_name(line) == "com.example.MyService"
