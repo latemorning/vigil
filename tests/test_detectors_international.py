@@ -136,6 +136,67 @@ class TestCreditCardDetector:
         matches = list(self.det.find(line))
         assert len(matches) == 1
 
+    def test_all_same_digit_not_matched(self):
+        # 0000000000000000 passes Luhn but is a placeholder, not a real card
+        matches = list(self.det.find("card=0000000000000000"))
+        assert len(matches) == 0
+
+    def test_timestamp_no_separator_not_matched(self):
+        # YYYYMMDDhhmmss pattern that happens to pass Luhn
+        matches = list(self.det.find("tr_no=20260414111845"))
+        assert len(matches) == 0
+
+    def test_timestamp_with_separator_still_matched(self):
+        # A real card number written with dashes should NOT be blocked by timestamp guard
+        matches = list(self.det.find("card=4539-1488-0343-6467"))
+        assert len(matches) == 1
+
+    def test_real_card_not_blocked(self):
+        # Valid card with no separator — not a timestamp pattern
+        matches = list(self.det.find("card=4539148803436467"))
+        assert len(matches) == 1
+
+
+# ---------------------------------------------------------------------------
+# EmailDetector — FP regression tests
+# ---------------------------------------------------------------------------
+
+class TestEmailDetectorFP:
+    def setup_method(self):
+        self.det = EmailDetector()
+
+    def test_jvm_module_path_not_matched(self):
+        matches = list(self.det.find("at io.undertow.servlet@2.3.0.Final//io.undertow"))
+        assert len(matches) == 0
+
+    def test_jakarta_module_not_matched(self):
+        matches = list(self.det.find("at jakarta.servlet.api@6.0.0//jakarta.servlet"))
+        assert len(matches) == 0
+
+    def test_org_wildfly_not_matched(self):
+        matches = list(self.det.find("at org.wildfly.security.elytron-base@2.0.0.Final"))
+        assert len(matches) == 0
+
+    def test_jboss_threads_not_matched(self):
+        matches = list(self.det.find("at org.jboss.threads@2.4.0.Final"))
+        assert len(matches) == 0
+
+    def test_real_email_alongside_jvm_matched(self):
+        # JVM path should be filtered, real email should remain
+        line = "at io.undertow.servlet@2.3.0.Final user=hong@example.com"
+        matches = list(self.det.find(line))
+        assert len(matches) == 1
+        assert matches[0].value == "hong@example.com"
+
+    def test_numeric_local_part_real_email(self):
+        # Local part can be numeric — domain starts with letter, so OK
+        matches = list(self.det.find("482274@naver.com"))
+        assert len(matches) == 1
+
+    def test_subdomain_email_still_matched(self):
+        matches = list(self.det.find("ss7312gm@file24.co.kr"))
+        assert len(matches) == 1
+
 
 # ---------------------------------------------------------------------------
 # IPv4Detector

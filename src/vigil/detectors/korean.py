@@ -169,7 +169,8 @@ class KoreanNameDetector:
     name = "name_korean"
 
     _PATTERN_CONTEXT = re.compile(
-        r'(?:이름|성명|성함|name|user_name|full_name|username)\s*[:=]\s*([가-힣]{2,4})'
+        r'(?:(?<![A-Za-z_])(?:name|user_name|full_name|username)|이름|성명|성함)'
+        r'\s*[:=]\s*([가-힣]{2,4})'
     )
     _PATTERN_SURNAME = re.compile(r'(?<![가-힣])([가-힣]{2,4})(?![가-힣])')
 

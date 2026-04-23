@@ -348,3 +348,32 @@ class TestKoreanNameDetector:
         high = [m for m in matches if m.confidence == "high"]
         assert len(high) == 1
         assert high[0].value == "박하시럽"
+
+    def test_shop_name_suffix_not_high_confidence(self):
+        # shop_name= contains 'name' as suffix — should NOT trigger high-conf
+        matches = list(self.det.find("shop_name=삼성카드"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 0
+
+    def test_site_name_suffix_not_high_confidence(self):
+        matches = list(self.det.find("site_name=현대카드"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 0
+
+    def test_store_name_suffix_not_high_confidence(self):
+        matches = list(self.det.find("store_name=하나카드"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 0
+
+    def test_bare_name_still_high_confidence(self):
+        # plain 'name=' at start — should still match high-conf
+        matches = list(self.det.find("name=홍길동"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 1
+        assert high[0].value == "홍길동"
+
+    def test_korean_이름_still_high_confidence(self):
+        matches = list(self.det.find("이름=김영희"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 1
+        assert high[0].value == "김영희"
