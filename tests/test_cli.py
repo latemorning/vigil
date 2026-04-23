@@ -121,6 +121,25 @@ def test_main_scan_name_stopwords_missing_file_exits_2():
     assert "does not exist" in result.stderr
 
 
+def test_main_scan_traces_source_module():
+    output = "/tmp/vigil-test-source-tracing.json"
+    result = run_vigil(
+        "scan", "tests/fixtures/logs/with_logger_names.log",
+        "--quiet",
+        "--output", output,
+    )
+    data = json.loads(Path(output).read_text())
+    # All matches must have the source_module key (D2)
+    for match in data["matches"]:
+        assert "source_module" in match
+    # Matches from line 1 should carry vigil.auth.login
+    line1 = [m for m in data["matches"] if m["line"] == 1]
+    assert all(m["source_module"] == "vigil.auth.login" for m in line1)
+    # Matches from line 4 (plain line) should have source_module=null
+    line4 = [m for m in data["matches"] if m["line"] == 4]
+    assert all(m["source_module"] is None for m in line4)
+
+
 def test_load_stopwords_file_ignores_comments_and_blank_lines(tmp_path):
     f = tmp_path / "words.txt"
     f.write_text("# 주석\n박하시럽\n\n이모티콘\n# 또 주석\n강남점\n", encoding="utf-8")
