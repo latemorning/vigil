@@ -12,7 +12,8 @@ class EmailDetector:
     """Email address detector."""
 
     name = "email"
-    _PATTERN = re.compile(r'[\w.+-]+@[\w-]+\.[\w.-]+')
+    # Domain must start with a letter to exclude JVM module coords like pkg@2.3.0.Final
+    _PATTERN = re.compile(r'[\w.+-]+@[A-Za-z][\w-]*\.[\w.-]+')
 
     def find(self, line: str, line_no: int = 0) -> Iterator[Match]:
         for m in self._PATTERN.finditer(line):
@@ -23,6 +24,16 @@ class EmailDetector:
                 column=m.start(),
                 confidence="high",
             )
+
+
+def _looks_like_timestamp(digits: str) -> bool:
+    """Return True if digits look like a YYYYMMDD… datetime string."""
+    if len(digits) < 8:
+        return False
+    year = int(digits[:4])
+    month = int(digits[4:6])
+    day = int(digits[6:8])
+    return 1900 <= year <= 2099 and 1 <= month <= 12 and 1 <= day <= 31
 
 
 class CreditCardDetector:
@@ -37,6 +48,12 @@ class CreditCardDetector:
             raw = m.group(0)
             digits = re.sub(r'[ -]', '', raw)
             if not luhn(digits):
+                continue
+            # Guard: all same digit (e.g. 0000000000000000)
+            if len(set(digits)) == 1:
+                continue
+            # Guard: unseparated number that looks like a YYYYMMDD timestamp
+            if ' ' not in raw and '-' not in raw and _looks_like_timestamp(digits):
                 continue
             yield Match(
                 detector=self.name,

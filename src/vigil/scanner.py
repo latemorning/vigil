@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Sequence
 from vigil.detectors.base import FileMatch, Detector
+from vigil.log_format import parse_logger_name
 
 __all__ = ["ScanResult", "scan_file", "scan_path", "DEFAULT_EXTENSIONS"]
 
@@ -29,12 +30,21 @@ class ScanResult:
             counts[m.detector] = counts.get(m.detector, 0) + 1
         return counts
 
+    @property
+    def by_source_module(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for m in self.matches:
+            key = m.source_module if m.source_module is not None else "<unknown>"
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
 
 def scan_file(path: Path, detectors: Sequence[Detector], min_confidence: str = "low") -> list[FileMatch]:
     matches: list[FileMatch] = []
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line_no, line in enumerate(fh, start=1):
             line = line.rstrip("\n")
+            source = parse_logger_name(line)
             for detector in detectors:
                 for match in detector.find(line, line_no=line_no):
                     if min_confidence == "high" and match.confidence == "low":
@@ -46,6 +56,7 @@ def scan_file(path: Path, detectors: Sequence[Detector], min_confidence: str = "
                         line_no=match.line_no,
                         column=match.column,
                         confidence=match.confidence,
+                        source_module=source,
                     ))
     return matches
 

@@ -79,6 +79,18 @@ def print_summary(result: ScanResult, output_path: str | None = None) -> None:
             file_table.add_row(fp, str(cnt))
         console.print(file_table)
 
+    # Top 5 source modules by match count
+    top_modules = sorted(result.by_source_module.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    if top_modules:
+        console.print("\nTop 5 source modules:")
+        module_table = Table(show_header=True, header_style="bold")
+        module_table.add_column("Source module")
+        module_table.add_column("Matches")
+        for mod, cnt in top_modules:
+            module_table.add_row(mod, str(cnt))
+        console.print(module_table)
+
     if output_path is not None:
         console.print(f"\nDetails written to {output_path}")
 
@@ -95,6 +107,7 @@ def write_json_report(result: ScanResult, output_path: str | Path) -> None:
             "detector": m.detector,
             "value": m.value,
             "confidence": m.confidence,
+            "source_module": m.source_module,
         }
         for m in result.matches
     ]

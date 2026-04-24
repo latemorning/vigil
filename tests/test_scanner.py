@@ -92,3 +92,40 @@ def test_scan_result_by_detector():
 def test_scan_result_total_matches():
     result = scan_path(FIXTURES / "mixed.log", all_detectors())
     assert result.total_matches == len(result.matches)
+
+
+# 9. source_module attached from log prefix
+def test_scan_file_attaches_source_module():
+    detectors = [EmailDetector(), RRNDetector(), CreditCardDetector(), KoreanNameDetector()]
+    matches = scan_file(FIXTURES / "with_logger_names.log", detectors)
+    by_line: dict[int, list] = {}
+    for m in matches:
+        by_line.setdefault(m.line_no, []).append(m)
+    # Line 1: format 1 — vigil.auth.login
+    for m in by_line.get(1, []):
+        assert m.source_module == "vigil.auth.login", f"line 1 mismatch: {m.source_module}"
+    # Line 2: format 3 — vigil.payment.processor
+    for m in by_line.get(2, []):
+        assert m.source_module == "vigil.payment.processor", f"line 2 mismatch: {m.source_module}"
+    # Line 3: format 4 — app.user
+    for m in by_line.get(3, []):
+        assert m.source_module == "app.user", f"line 3 mismatch: {m.source_module}"
+
+
+# 10. source_module is None for plain log lines without a logger prefix
+def test_scan_file_none_when_no_logger():
+    detectors = [EmailDetector()]
+    matches = scan_file(FIXTURES / "mixed.log", detectors)
+    assert all(m.source_module is None for m in matches)
+
+
+# 11. by_source_module property aggregates correctly
+def test_scan_result_by_source_module():
+    detectors = [EmailDetector(), RRNDetector(), CreditCardDetector(), KoreanNameDetector()]
+    result = scan_path(FIXTURES / "with_logger_names.log", detectors)
+    bsm = result.by_source_module
+    assert "vigil.auth.login" in bsm
+    assert "vigil.payment.processor" in bsm
+    assert "app.user" in bsm
+    # Line 4 has no logger prefix — maps to <unknown>
+    assert "<unknown>" in bsm

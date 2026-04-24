@@ -113,6 +113,68 @@ def test_print_summary_runs_without_error(capsys):
     print_summary(result, output_path="/tmp/report.json")
 
 
+def test_json_report_includes_source_module_key(tmp_path):
+    matches = [
+        FileMatch(
+            file_path="logs/app.log",
+            detector="email",
+            value="user@example.com",
+            line_no=1,
+            column=0,
+            confidence="high",
+            source_module="my.module",
+        ),
+        FileMatch(
+            file_path="logs/app.log",
+            detector="rrn",
+            value="900101-1234568",
+            line_no=2,
+            column=0,
+            confidence="high",
+            source_module=None,
+        ),
+    ]
+    result = _make_result(matches)
+    output = tmp_path / "report.json"
+    write_json_report(result, output)
+    data = json.loads(output.read_text(encoding="utf-8"))
+    # D2: source_module key always present
+    for m in data["matches"]:
+        assert "source_module" in m
+    assert data["matches"][0]["source_module"] == "my.module"
+    assert data["matches"][1]["source_module"] is None
+
+
+def test_summary_includes_top_source_modules(capsys, tmp_path):
+    matches = [
+        FileMatch(
+            file_path="logs/app.log",
+            detector="email",
+            value="a@b.com",
+            line_no=1,
+            column=0,
+            confidence="high",
+            source_module="my.auth",
+        ),
+        FileMatch(
+            file_path="logs/app.log",
+            detector="rrn",
+            value="900101-1234568",
+            line_no=2,
+            column=0,
+            confidence="high",
+            source_module=None,
+        ),
+    ]
+    result = _make_result(matches)
+    print_summary(result)
+    # rich writes to its own Console (not capsys), so just verify no exception is raised.
+    # Functional check: by_source_module should map the two entries.
+    bsm = result.by_source_module
+    assert bsm.get("my.auth") == 1
+    assert bsm.get("<unknown>") == 1
+
+
 def test_builtin_detectors_registry():
     from vigil.detectors import BUILTIN_DETECTORS
 

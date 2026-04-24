@@ -1,0 +1,4 @@
+2026-04-21 12:00:00,123 INFO vigil.auth.login - user=hong@example.com rrn=9001011234568
+INFO:vigil.payment.processor:card=4539148803436467
+[2026-04-21 12:00:02] [WARNING] [app.user] 이름=홍길동
+plain log line without logger prefix user=kim@example.com

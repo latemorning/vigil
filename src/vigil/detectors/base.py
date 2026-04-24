@@ -15,6 +15,7 @@ class Match:
     line_no: int        # 1-indexed line number
     column: int         # 0-indexed start column
     confidence: Confidence = "high"
+    source_module: str | None = None
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class FileMatch:
     line_no: int
     column: int
     confidence: Confidence = "high"
+    source_module: str | None = None
 
 
 class Detector(Protocol):

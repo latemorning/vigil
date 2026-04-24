@@ -329,3 +329,51 @@ class TestKoreanNameDetector:
         assert len(high) == 1
         # value starts at the Korean name, not at "이름"
         assert line[high[0].column:high[0].column + len(high[0].value)] == high[0].value
+
+    def test_extra_stopword_filters_strategy_b(self):
+        det = KoreanNameDetector(extra_stopwords={"이모티"})
+        matches = list(det.find("이모티 귀엽다"))
+        values = [m.value for m in matches]
+        assert "이모티" not in values
+
+    def test_builtin_stopwords_still_active_with_extras(self):
+        det = KoreanNameDetector(extra_stopwords={"이모티"})
+        matches = list(det.find("김치 맛있다"))
+        values = [m.value for m in matches]
+        assert "김치" not in values
+
+    def test_extras_do_not_affect_strategy_a(self):
+        det = KoreanNameDetector(extra_stopwords={"박하시럽"})
+        matches = list(det.find("이름=박하시럽"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 1
+        assert high[0].value == "박하시럽"
+
+    def test_shop_name_suffix_not_high_confidence(self):
+        # shop_name= contains 'name' as suffix — should NOT trigger high-conf
+        matches = list(self.det.find("shop_name=삼성카드"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 0
+
+    def test_site_name_suffix_not_high_confidence(self):
+        matches = list(self.det.find("site_name=현대카드"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 0
+
+    def test_store_name_suffix_not_high_confidence(self):
+        matches = list(self.det.find("store_name=하나카드"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 0
+
+    def test_bare_name_still_high_confidence(self):
+        # plain 'name=' at start — should still match high-conf
+        matches = list(self.det.find("name=홍길동"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 1
+        assert high[0].value == "홍길동"
+
+    def test_korean_이름_still_high_confidence(self):
+        matches = list(self.det.find("이름=김영희"))
+        high = [m for m in matches if m.confidence == "high"]
+        assert len(high) == 1
+        assert high[0].value == "김영희"

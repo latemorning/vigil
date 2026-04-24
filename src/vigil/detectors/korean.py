@@ -1,7 +1,7 @@
 """Korean PII detectors."""
 from __future__ import annotations
 import re
-from typing import Iterator
+from typing import Iterable, Iterator
 from vigil.detectors.base import Match
 from vigil.validators import validate_rrn, validate_brn
 
@@ -33,6 +33,17 @@ _KOREAN_NAME_STOP = frozenset([
     "박물", "전통", "박자", "이야", "이미", "이상", "이후", "정도", "강도", "고기",
     # context-keyword words that start with surnames but are not names
     "이름", "성명", "성함", "성별", "이메일", "이용", "이전", "이번", "주소", "주민",
+    # 금융/업무 동사·명사 (운영 로그 고빈도 오탐)
+    "조회", "전송", "차감", "차감요청", "차감완료", "차감을", "전달",
+    "전환", "전환단위", "전환비율", "전환시", "전환한도",
+    "추가인증", "전송성공", "유효성", "한도금액", "정책", "마스터",
+    "주식회사", "구간", "정상",
+    # 카드사명
+    "신한카드", "하나카드", "우리카드", "현대카드",
+    # 일반 서비스 용어
+    "정보", "서비스", "고객", "이벤트", "이용약관", "마케팅", "안내", "공휴일", "주중", "노티",
+    # 기업·브랜드
+    "한화", "한화생명", "이글스",
 ])
 
 
@@ -158,9 +169,13 @@ class KoreanNameDetector:
     name = "name_korean"
 
     _PATTERN_CONTEXT = re.compile(
-        r'(?:이름|성명|성함|name|user_name|full_name|username)\s*[:=]\s*([가-힣]{2,4})'
+        r'(?:(?<![A-Za-z_])(?:name|user_name|full_name|username)|이름|성명|성함)'
+        r'\s*[:=]\s*([가-힣]{2,4})'
     )
     _PATTERN_SURNAME = re.compile(r'(?<![가-힣])([가-힣]{2,4})(?![가-힣])')
+
+    def __init__(self, extra_stopwords: Iterable[str] | None = None) -> None:
+        self._stopwords = _KOREAN_NAME_STOP | frozenset(extra_stopwords or ())
 
     def find(self, line: str, line_no: int = 0) -> Iterator[Match]:
         context_spans: set[tuple[int, int]] = set()
@@ -187,7 +202,7 @@ class KoreanNameDetector:
                 continue
             if candidate[0] not in _KOREAN_SURNAMES:
                 continue
-            if candidate in _KOREAN_NAME_STOP:
+            if candidate in self._stopwords:
                 continue
             yield Match(
                 detector=self.name,
