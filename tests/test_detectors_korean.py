@@ -342,12 +342,11 @@ class TestKoreanNameDetector:
         values = [m.value for m in matches]
         assert "김치" not in values
 
-    def test_extras_do_not_affect_strategy_a(self):
+    def test_extra_stopword_filters_strategy_a(self):
         det = KoreanNameDetector(extra_stopwords={"박하시럽"})
         matches = list(det.find("이름=박하시럽"))
-        high = [m for m in matches if m.confidence == "high"]
-        assert len(high) == 1
-        assert high[0].value == "박하시럽"
+        values = [m.value for m in matches]
+        assert "박하시럽" not in values
 
     def test_shop_name_suffix_not_high_confidence(self):
         # shop_name= contains 'name' as suffix — should NOT trigger high-conf

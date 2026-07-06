@@ -33,14 +33,14 @@ vigil scan /var/log/myapp/ --output report.json
 
 | 디텍터 | 이름 | 설명 |
 |---|---|---|
-| 주민등록번호 | `rrn` | 6자리-7자리, 체크섬 검증 |
-| 휴대폰 번호 | `phone_mobile` | 010/011/016/017/018/019 |
-| 일반전화 번호 | `phone_landline` | 02/031~070/080 |
-| 사업자등록번호 | `business_number` | 000-00-00000, 체크섬 검증 |
+| 주민등록번호 | `rrn` | 13자리(하이픈·공백 허용), 체크섬 검증 |
+| 휴대폰 번호 | `phone_mobile` | 010/011/016/017/018/019, 하이픈·점·공백 허용 |
+| 일반전화 번호 | `phone_landline` | 02, `0[3-6][1-5]`, 070, 080 형식 |
+| 사업자등록번호 | `business_number` | `000-00-00000` 형식, 체크섬 검증 |
 | 연계정보(CI) | `ci` | 88자 Base64, 라벨 유무로 신뢰도 구분 |
-| 한국식 이름 | `name_korean` | 컨텍스트 키워드(high) + 성씨 휴리스틱(low) |
-| 이메일 | `email` | RFC 이메일 형식 |
-| 신용카드 번호 | `credit_card` | 13~19자리, Luhn 체크섬 검증 |
+| 한국식 이름 | `name_korean` | 컨텍스트 키워드(high) + 성씨 휴리스틱(low), stopword 제외 |
+| 이메일 | `email` | 일반적인 로컬파트·도메인 형식, JVM 모듈 좌표 제외 |
+| 신용카드 번호 | `credit_card` | 13~19자리, Luhn 체크섬 검증, 타임스탬프·동일 숫자 반복 제외 |
 | IPv4 주소 | `ipv4` | 0.0.0.0~255.255.255.255 |
 
 ## 옵션
@@ -53,7 +53,8 @@ vigil scan <경로> [옵션]
   --detector NAMES          활성화할 디텍터 이름, 쉼표 구분 (기본값: 전체)
   --min-confidence {high,low}  리포트할 최소 신뢰도 (기본값: low)
   -q, --quiet               터미널 요약 출력 생략
-  --name-stopwords FILE     한국 이름 검출에서 제외할 단어 목록 파일 (UTF-8, # 주석 허용)
+  --name-stopwords FILE     한국 이름 검출에서 제외할 UTF-8 단어 목록
+                            (기본값: ./company_terms.txt가 있으면 자동 사용)
 ```
 
 ## 사용 예시
@@ -72,7 +73,9 @@ vigil scan app.log --min-confidence high
 
 ### 회사 고유 명칭을 이름 검출에서 제외
 
-프로덕트명, 지명, 카드사명 등이 한국 이름으로 오탐되는 경우 stopwords 파일로 제외할 수 있습니다.
+프로덕트명, 지명, 카드사명 등이 한국 이름으로 오탐되는 경우 stopwords 파일로 제외할 수 있습니다. UTF-8 파일에 한 줄에 한 단어씩 작성하며, 빈 줄과 `#`로 시작하는 줄은 무시됩니다. 등록한 단어는 high/low 신뢰도 이름 검출 모두에서 제외됩니다.
+
+현재 작업 디렉터리에 `company_terms.txt`가 있으면 별도 옵션 없이 자동 적용됩니다. `--name-stopwords`로 다른 파일을 지정하면 기본 파일 대신 해당 파일을 사용합니다.
 
 ```text
 # company_terms.txt
@@ -85,7 +88,10 @@ vigil scan app.log --min-confidence high
 ```
 
 ```bash
-vigil scan app.log --name-stopwords company_terms.txt
+vigil scan app.log
+
+# 다른 파일을 사용하려면 명시 지정
+vigil scan app.log --name-stopwords custom_terms.txt
 ```
 
 ### CI/CD 통합 (종료 코드)
@@ -118,6 +124,13 @@ Found 4 matches (high: 4, low: 0):
 │ name_korean │ 1       │ high       │
 └─────────────┴─────────┴────────────┘
 
+Top 5 files by matches:
+┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ File              ┃ Matches ┃
+┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ /var/log/app.log │ 4       │
+└──────────────────┴─────────┘
+
 Top 5 source modules:
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
 ┃ Source module           ┃ Matches ┃
@@ -126,6 +139,8 @@ Top 5 source modules:
 │ vigil.payment.processor │ 1       │
 │ app.user                │ 1       │
 └─────────────────────────┴─────────┘
+
+Details written to report.json
 ```
 
 ## JSON 리포트 형식
@@ -155,6 +170,8 @@ Top 5 source modules:
 }
 ```
 
+`line`은 1부터, `column`은 0부터 세는 위치입니다. `by_detector`에는 실제로 검출된 디텍터만 포함됩니다.
+
 ### `source_module` 필드
 
 로그 라인의 prefix에서 로거 이름을 추출해 각 매치에 붙입니다. Python `logging` 모듈과 WildFly/JBoss 등 주요 포맷을 지원합니다.
@@ -183,7 +200,7 @@ python -m pytest tests/test_detectors_korean.py -v
 
 | 신뢰도 | 조건 | 예시 |
 |---|---|---|
-| `high` | `이름=`, `name=`, `성명=` 등 컨텍스트 키워드 뒤에 한글 2~4자 | `이름=홍길동` |
+| `high` | `이름`, `성명`, `성함`, `name`, `user_name`, `full_name`, `username` 뒤에 `:` 또는 `=`과 한글 2~4자 | `이름=홍길동` |
 | `low` | 한국 성씨로 시작하는 한글 2~4자 (휴리스틱) | `담당자 박수진 연락처` |
 
-오탐이 많을 경우 `--min-confidence high` 또는 `--name-stopwords` 옵션을 사용하세요.
+내장 stopword와 사용자 stopword가 두 방식에 모두 적용됩니다. 오탐이 많을 경우 `--min-confidence high` 또는 현재 작업 디렉터리의 `company_terms.txt`를 사용하세요.

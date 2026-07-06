@@ -186,6 +186,8 @@ class KoreanNameDetector:
             cap_start = m.start(1)
             cap_end = m.end(1)
             context_spans.add((cap_start, cap_end))
+            if cap in self._stopwords:
+                continue
             yield Match(
                 detector=self.name,
                 value=cap,

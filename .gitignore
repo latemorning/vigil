@@ -13,3 +13,4 @@ htmlcov/
 .DS_Store
 source/
 vigil-report.json
+vigil-report.json.back.*

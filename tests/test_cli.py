@@ -95,6 +95,24 @@ def test_main_scan_detector_filter():
         assert match["detector"] == "email"
 
 
+def test_main_scan_uses_default_company_terms_file(tmp_path):
+    log = tmp_path / "default-company-terms.log"
+    output = tmp_path / "default-company-terms-report.json"
+    log.write_text("고객이나 혜택 안내\nname=현대카드\n박수진 담당자 연락처\n", encoding="utf-8")
+    result = run_vigil(
+        "scan", str(log),
+        "--detector", "name_korean",
+        "--quiet",
+        "--output", str(output),
+    )
+    assert result.returncode == 1
+    data = json.loads(output.read_text())
+    matched_values = [m["value"] for m in data["matches"]]
+    assert "고객이나" not in matched_values
+    assert "현대카드" not in matched_values
+    assert "박수진" in matched_values
+
+
 def test_main_scan_name_stopwords_filters():
     output = "/tmp/vigil-test-stopwords.json"
     result = run_vigil(

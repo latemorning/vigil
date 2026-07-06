@@ -10,6 +10,8 @@ from vigil.report import print_summary, write_json_report
 
 __all__ = ["main"]
 
+DEFAULT_NAME_STOPWORDS_FILE = "company_terms.txt"
+
 
 def _load_stopwords_file(path: Path) -> frozenset[str]:
     words: set[str] = set()
@@ -19,6 +21,11 @@ def _load_stopwords_file(path: Path) -> frozenset[str]:
             continue
         words.add(line)
     return frozenset(words)
+
+
+def _default_stopwords_path() -> Path | None:
+    path = Path.cwd() / DEFAULT_NAME_STOPWORDS_FILE
+    return path if path.is_file() else None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -65,7 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="FILE",
         dest="name_stopwords",
-        help="Path to a UTF-8 text file of words to exclude from Korean name detection (one per line, # comments allowed)",
+        help="Path to a UTF-8 text file of words to exclude from Korean name detection (default: ./company_terms.txt if present)",
     )
     return parser
 
@@ -93,10 +100,10 @@ def main() -> None:
             print(f"Error: no detectors matched: {args.detector}", file=sys.stderr)
             sys.exit(2)
 
-    # Apply extra stopwords to Korean name detector if requested
-    if args.name_stopwords:
-        sw_path = args.name_stopwords.resolve()
-        if not sw_path.exists():
+    # Apply extra stopwords to Korean name detector.
+    sw_path = args.name_stopwords.resolve() if args.name_stopwords else _default_stopwords_path()
+    if sw_path:
+        if not sw_path.is_file():
             print(f"Error: --name-stopwords file does not exist: {sw_path}", file=sys.stderr)
             sys.exit(2)
         extra = _load_stopwords_file(sw_path)
